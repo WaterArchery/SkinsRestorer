@@ -41,14 +41,28 @@ public final class OfflineModeWarningService {
     private final PlayerStorageImpl playerStorage;
     private final Injector injector;
     private final Set<UUID> pendingWarnings = ConcurrentHashMap.newKeySet();
+    private final Set<UUID> activeWarnings = ConcurrentHashMap.newKeySet();
 
     public void recordLogin(UUID uuid, boolean hasOnlineProperties) {
+        activeWarnings.remove(uuid);
+
         if (hasOnlineProperties || FloodgateUtil.isFloodgateBedrockPlayer(uuid)) {
             pendingWarnings.remove(uuid);
             return;
         }
 
         pendingWarnings.add(uuid);
+    }
+
+    /**
+     * Answers from memory so that command permission checks never touch storage.
+     */
+    public boolean hasActiveWarning(UUID uuid) {
+        return activeWarnings.contains(uuid);
+    }
+
+    public void dismissWarning(UUID uuid) {
+        activeWarnings.remove(uuid);
     }
 
     public void handleConnect(SRPlayer player) {
@@ -68,6 +82,7 @@ public final class OfflineModeWarningService {
             return;
         }
 
+        activeWarnings.add(player.getUniqueId());
         player.sendMessage(Message.OFFLINE_MODE_SKIN_WARNING);
     }
 

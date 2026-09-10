@@ -25,9 +25,9 @@ import net.skinsrestorer.api.property.SkinVariant;
 import net.skinsrestorer.shared.commands.library.annotations.*;
 import net.skinsrestorer.shared.commands.library.types.PlayerSelectorArgumentParser;
 import net.skinsrestorer.shared.config.ProxyConfig;
+import net.skinsrestorer.shared.listeners.OfflineModeWarningService;
 import net.skinsrestorer.shared.log.SRLogger;
 import net.skinsrestorer.shared.plugin.SRPlatformAdapter;
-import net.skinsrestorer.shared.storage.PlayerStorageImpl;
 import net.skinsrestorer.shared.storage.adapter.AdapterReference;
 import net.skinsrestorer.shared.storage.adapter.StorageAdapter;
 import net.skinsrestorer.shared.subjects.SRCommandSender;
@@ -86,7 +86,7 @@ public class SRCommandManager {
     @SuppressWarnings({"unchecked", "resource"})
     @Inject
     public SRCommandManager(SRPlatformAdapter platform, SRLogger logger, SkinsRestorerLocale locale, SettingsManager settingsManager,
-                            AdapterReference reference, PlayerStorageImpl playerStorage) {
+                            AdapterReference reference, OfflineModeWarningService offlineModeWarningService) {
         this.commandManager = platform.createCommandManager();
         this.annotationParser = new AnnotationParser<>(commandManager, SRCommandSender.class);
         StorageBackendRepository storageRepository = new StorageBackendRepository(reference);
@@ -192,7 +192,7 @@ public class SRCommandManager {
                         UNDISMISSED_OFFLINE_MODE_WARNING_PERMISSION,
                         sender -> sender instanceof SRPlayer player
                                 && sender.hasPermission(annotation.value())
-                                && !playerStorage.isOfflineModeWarningDismissed(player.getUniqueId())
+                                && offlineModeWarningService.hasActiveWarning(player.getUniqueId())
                 ))
         );
         annotationParser.registerBuilderModifier(

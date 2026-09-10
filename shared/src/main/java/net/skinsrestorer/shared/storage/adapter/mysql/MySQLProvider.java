@@ -18,14 +18,13 @@
 package net.skinsrestorer.shared.storage.adapter.mysql;
 
 import ch.jalu.configme.SettingsManager;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import lombok.RequiredArgsConstructor;
 import net.skinsrestorer.shared.config.DatabaseConfig;
 import net.skinsrestorer.shared.log.SRLogger;
 import net.skinsrestorer.shared.plugin.SRPlugin;
 import org.intellij.lang.annotations.Language;
-import org.mariadb.jdbc.Configuration;
-import org.mariadb.jdbc.pool.Pool;
-import org.mariadb.jdbc.pool.Pools;
 
 import javax.inject.Inject;
 import java.sql.Connection;
@@ -35,9 +34,10 @@ import java.sql.SQLException;
 
 @RequiredArgsConstructor(onConstructor_ = @Inject)
 public class MySQLProvider {
+    private static final int POOL_TIMEOUT_MS = 5000;
     private final SRLogger logger;
     private final SettingsManager settings;
-    private Pool pool;
+    private HikariDataSource dataSource;
 
     public void initPool() throws SQLException {
         String host = settings.getProperty(DatabaseConfig.DATABASE_HOST);
@@ -48,13 +48,24 @@ public class MySQLProvider {
         int maxPoolSize = settings.getProperty(DatabaseConfig.DATABASE_MAX_POOL_SIZE);
         String options = settings.getProperty(DatabaseConfig.DATABASE_CONNECTION_OPTIONS);
 
-        Configuration configuration = Configuration.parse("jdbc:mysql://%s:%d/%s?permitMysqlScheme&maxPoolSize=%d&%s".formatted(host, port, database, maxPoolSize, options));
+        HikariConfig config = new HikariConfig();
+        config.setDriverClassName(org.mariadb.jdbc.Driver.class.getName());
+        config.setJdbcUrl("jdbc:mysql://%s:%d/%s?permitMysqlScheme&%s".formatted(host, port, database, options));
+        config.setUsername(username);
+        config.setPassword(password);
+        config.setMaximumPoolSize(maxPoolSize);
+        config.setConnectionTimeout(POOL_TIMEOUT_MS);
+        config.setPoolName("SkinsRestorer-MySQL");
 
-        pool = Pools.retrievePool(configuration.clone(username, password));
+        if (dataSource != null) {
+            dataSource.close();
+        }
+
+        dataSource = new HikariDataSource(config);
     }
 
     public int update(@Language("sql") final String query, final Object... vars) {
-        try (Connection connection = pool.getPoolConnection().getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             try (PreparedStatement ps = connection.prepareStatement(query)) {
                 fillPreparedStatement(ps, vars);
 
@@ -76,7 +87,7 @@ public class MySQLProvider {
     }
 
     public ResultSet query(@Language("sql") final String query, final Object... vars) throws SQLException {
-        try (Connection connection = pool.getPoolConnection().getConnection()) {
+        try (Connection connection = dataSource.getConnection()) {
             try (PreparedStatement ps = connection.prepareStatement(query)) {
                 fillPreparedStatement(ps, vars);
 

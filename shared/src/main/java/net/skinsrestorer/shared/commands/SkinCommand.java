@@ -42,6 +42,7 @@ import net.skinsrestorer.shared.config.AdvancedConfig;
 import net.skinsrestorer.shared.config.CommandConfig;
 import net.skinsrestorer.shared.connections.RecommendationsState;
 import net.skinsrestorer.shared.connections.responses.RecommenationResponse;
+import net.skinsrestorer.shared.listeners.OfflineModeWarningService;
 import net.skinsrestorer.shared.log.SRLogLevel;
 import net.skinsrestorer.shared.log.SRLogger;
 import net.skinsrestorer.shared.plugin.SRPlatformAdapter;
@@ -99,6 +100,7 @@ public final class SkinCommand {
     private final SkinPermissionManager permissionManager;
     private final MetricsCounter metricsCounter;
     private final CommandHelpService helpService;
+    private final OfflineModeWarningService offlineModeWarningService;
 
     @Command("")
     @CommandPermission(PermissionRegistry.SKIN)
@@ -550,6 +552,7 @@ public final class SkinCommand {
     @UndismissedOfflineModeWarning(PermissionRegistry.SKIN)
     private void onIgnoreCrackedClient(SRPlayer player) {
         playerStorage.setOfflineModeWarningDismissed(player.getUniqueId(), true);
+        offlineModeWarningService.dismissWarning(player.getUniqueId());
         player.sendMessage(Message.SUCCESS_OFFLINE_MODE_SKIN_WARNING_IGNORED);
     }
 
